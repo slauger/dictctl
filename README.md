@@ -1,17 +1,17 @@
 # dictctl
 
-[![Go](https://img.shields.io/badge/Go-1.22+-00ADD8?logo=go&logoColor=white)](https://go.dev)
+[![Go](https://img.shields.io/badge/Go-1.26+-00ADD8?logo=go&logoColor=white)](https://go.dev)
 [![License](https://img.shields.io/github/license/slauger/dictctl)](LICENSE)
 
 CLI tool for dictation: microphone recording → Whisper transcription → text on stdout.
 
-- 🎙️ **Record & Transcribe** — Record from any audio device, stop with Ctrl+C, get text on stdout
+- 🎙️ **Record & Transcribe** — Record from your microphone, stop with Ctrl+C, get text on stdout
 - 🏠 **Local Backend** — Offline transcription via [whisper.cpp](https://github.com/ggerganov/whisper.cpp) — no data leaves your machine
 - ☁️ **OpenAI Backend** — Cloud transcription via the OpenAI Whisper API — no local GPU needed
 - 📋 **Clipboard Support** — Copy transcription result directly to clipboard with `-c`
 - 🔇 **Silence Detection** — Auto-stop recording after silence with `-s`
-- 🎚️ **Device Selection** — List and select audio input devices — no fiddling with system preferences
 - 📁 **File Transcription** — Transcribe existing audio files without recording
+- 🔧 **Interactive Setup** — Configure language, backend, model, and audio device via `dictctl setup` (requires [fzf](https://github.com/junegunn/fzf))
 - ⚡ **Single Binary** — No runtime dependencies, no Python, no Docker — just a Go binary and sox
 
 ## Requirements
@@ -52,13 +52,13 @@ dictctl
 
 ```bash
 dictctl                         # record → default backend
-dictctl local                   # record → whisper-cpp
-dictctl openai                  # record → OpenAI API
+dictctl -b openai               # record → OpenAI API
 dictctl file audio.mp3          # transcribe existing file
-dictctl file audio.mp3 openai   # transcribe file with specific backend
 dictctl devices                 # list audio input devices
-dictctl download                # download whisper model
+dictctl download                # download whisper model (interactive)
 dictctl download -m base        # download a specific model
+dictctl setup                   # interactive configuration
+dictctl --help                  # show help
 ```
 
 Press **Ctrl+C** to stop recording. The audio is finalized cleanly and passed to the transcription backend.
@@ -67,11 +67,13 @@ Press **Ctrl+C** to stop recording. The audio is finalized cleanly and passed to
 
 | Flag | Description |
 |------|-------------|
+| `-b <backend>` | Backend: `local`, `openai` (default: from config) |
 | `-c` | Copy result to clipboard (macOS, via `pbcopy`) |
+| `-d <device>` | Audio input device (see `dictctl devices`) |
 | `-l <lang>` | Language code (default: `en`) |
 | `-s` | Enable silence detection (auto-stop recording) |
 | `-m <model>` | Override model name |
-| `-d <device>` | Audio input device (see `dictctl devices`) |
+| `-h, --help` | Show help |
 
 ### Examples
 
@@ -80,15 +82,15 @@ Press **Ctrl+C** to stop recording. The audio is finalized cleanly and passed to
 dictctl
 
 # Record in German via OpenAI
-dictctl openai -l de
+dictctl -b openai -l de
 
 # Transcribe a file and copy to clipboard
 dictctl file meeting.wav -c
 
 # Use a specific local model
-dictctl local -m large-v3
+dictctl -m large-v3
 
-# Record from a specific microphone
+# Record from a specific device
 dictctl -d "Elgato Wave:3"
 ```
 
@@ -124,7 +126,7 @@ dictctl devices
 * = default input device
 ```
 
-Select a device per invocation with `-d` or set a default in the config file.
+Select a device per invocation with `-d` or set a default in the config file. When a device is configured, recording uses ffmpeg (avfoundation) instead of sox. Without a device, it uses the system default via sox.
 
 ## Configuration
 
@@ -133,7 +135,7 @@ Config file: `~/.config/dictctl/config.yaml`
 ```yaml
 default_backend: local
 language: en
-device: "Elgato Wave:3"
+# device: "Elgato Wave:3"
 
 backends:
   local:

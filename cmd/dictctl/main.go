@@ -10,6 +10,7 @@ import (
 	"github.com/slauger/dictctl/internal/clipboard"
 	"github.com/slauger/dictctl/internal/config"
 	"github.com/slauger/dictctl/internal/download"
+	"github.com/slauger/dictctl/internal/setup"
 )
 
 var version = "dev"
@@ -24,7 +25,9 @@ type options struct {
 	device    string
 	devices   bool
 	download  bool
+	setup     bool
 	version   bool
+	help      bool
 }
 
 func parseArgs(args []string) options {
@@ -46,6 +49,11 @@ func parseArgs(args []string) options {
 			if i < len(args) {
 				opts.model = args[i]
 			}
+		case "-b":
+			i++
+			if i < len(args) {
+				opts.backend = args[i]
+			}
 		case "-d":
 			i++
 			if i < len(args) {
@@ -60,16 +68,42 @@ func parseArgs(args []string) options {
 			opts.devices = true
 		case "download":
 			opts.download = true
+		case "setup":
+			opts.setup = true
 		case "version", "--version", "-v":
 			opts.version = true
+		case "help", "--help", "-h":
+			opts.help = true
 		default:
-			if !strings.HasPrefix(args[i], "-") {
-				opts.backend = args[i]
-			}
+			fmt.Fprintf(os.Stderr, "dictctl: unknown argument: %s\n\n", args[i])
+			fmt.Print(usage())
+			os.Exit(1)
 		}
 		i++
 	}
 	return opts
+}
+
+func usage() string {
+	return `Usage: dictctl [flags]
+       dictctl <command> [flags]
+
+Commands:
+  file <path>   Transcribe an existing audio file
+  devices       List audio input devices
+  download      Download whisper model
+  setup         Interactive configuration (requires fzf)
+  version       Print version
+
+Flags:
+  -b <backend>  Backend: local, openai (default: from config)
+  -c            Copy result to clipboard
+  -l <lang>     Language code (default: en)
+  -s            Enable silence detection
+  -m <model>    Override model name
+  -d <device>   Audio input device (see 'dictctl devices')
+  -h, --help    Show this help
+`
 }
 
 func fatal(format string, args ...any) {
@@ -79,6 +113,11 @@ func fatal(format string, args ...any) {
 
 func main() {
 	opts := parseArgs(os.Args[1:])
+
+	if opts.help {
+		fmt.Print(usage())
+		return
+	}
 
 	if opts.version {
 		fmt.Println("dictctl " + version)
@@ -97,6 +136,13 @@ func main() {
 		fatal("config: %v", err)
 	}
 
+	if opts.setup {
+		if err := setup.Run(cfg.Language, cfg.Device, cfg.DefaultBackend, cfg.Backends.Local.Model); err != nil {
+			fatal("%v", err)
+		}
+		return
+	}
+
 	if opts.language != "" {
 		cfg.Language = opts.language
 	}
@@ -108,9 +154,18 @@ func main() {
 
 	// Handle download subcommand
 	if opts.download {
-		model := cfg.Backends.Local.Model
-		if opts.model != "" {
-			model = opts.model
+		model := opts.model
+		if model == "" {
+			// Try fzf interactive selection
+			selected, err := download.SelectModel()
+			if err != nil {
+				// No fzf, fall back to configured default
+				model = cfg.Backends.Local.Model
+			} else if selected == "" {
+				return // user cancelled
+			} else {
+				model = selected
+			}
 		}
 		if err := download.Model(model); err != nil {
 			fatal("%v", err)
