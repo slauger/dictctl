@@ -8,6 +8,7 @@ import (
 	"path/filepath"
 	"strings"
 
+	"github.com/slauger/dictctl/internal/download"
 	"gopkg.in/yaml.v3"
 )
 
@@ -67,7 +68,7 @@ func fzfSelect(prompt string, items []string) (string, error) {
 	return strings.TrimSpace(string(out)), nil
 }
 
-func Run(currentLang, currentDevice, currentBackend string) error {
+func Run(currentLang, currentDevice, currentBackend, currentModel string) error {
 	if _, err := exec.LookPath("fzf"); err != nil {
 		return fmt.Errorf("fzf not found — install with: brew install fzf")
 	}
@@ -100,7 +101,27 @@ func Run(currentLang, currentDevice, currentBackend string) error {
 		fmt.Fprintf(os.Stderr, "Backend: %s\n", be)
 	}
 
-	// 3. Device
+	// 3. Model (for local backend)
+	model, err := selectModel(currentModel)
+	if err != nil {
+		return nil
+	}
+	if model != "" {
+		backends, _ := cfg["backends"].(map[string]any)
+		if backends == nil {
+			backends = make(map[string]any)
+		}
+		local, _ := backends["local"].(map[string]any)
+		if local == nil {
+			local = make(map[string]any)
+		}
+		local["model"] = model
+		backends["local"] = local
+		cfg["backends"] = backends
+		fmt.Fprintf(os.Stderr, "Model: %s\n", model)
+	}
+
+	// 4. Device
 	dev, err := selectDevice(currentDevice)
 	if err != nil {
 		return nil
@@ -177,6 +198,39 @@ func selectBackend(current string) (string, error) {
 		name = fields[1]
 	}
 	return name, nil
+}
+
+func selectModel(current string) (string, error) {
+	var items []string
+	for _, m := range download.AvailableModels {
+		marker := "  "
+		if m.Name == current {
+			marker = "* "
+		}
+		installed := " "
+		dest := filepath.Join(download.ModelDir(), download.ModelFileName(m.Name))
+		if _, err := os.Stat(dest); err == nil {
+			installed = "✓"
+		}
+		items = append(items, fmt.Sprintf("%s%s %-20s %s", marker, installed, m.Name, m.Size))
+	}
+
+	selected, err := fzfSelect("Model: ", items)
+	if err != nil {
+		return "", err
+	}
+
+	fields := strings.Fields(selected)
+	if len(fields) < 2 {
+		return "", nil
+	}
+	// Skip marker (*) and checkmark (✓)
+	for _, f := range fields {
+		if f != "*" && f != "✓" {
+			return f, nil
+		}
+	}
+	return "", nil
 }
 
 func selectDevice(current string) (string, error) {
