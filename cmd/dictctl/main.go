@@ -99,7 +99,7 @@ Flags:
   -l <lang>     Language code (default: en)
   -s            Enable silence detection
   -m <model>    Override model name
-  -d <device>   Audio input device
+  -d <device>   Audio input device (see 'dictctl devices')
   -h, --help    Show this help
 `)
 		return
