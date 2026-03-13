@@ -75,7 +75,7 @@ func parseArgs(args []string) options {
 		case "help", "--help", "-h":
 			opts.help = true
 		default:
-			// ignore unknown args
+			fatal("unknown argument: %s", args[i])
 		}
 		i++
 	}
