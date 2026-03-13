@@ -133,9 +133,18 @@ Flags:
 
 	// Handle download subcommand
 	if opts.download {
-		model := cfg.Backends.Local.Model
-		if opts.model != "" {
-			model = opts.model
+		model := opts.model
+		if model == "" {
+			// Try fzf interactive selection
+			selected, err := download.SelectModel()
+			if err != nil {
+				// No fzf, fall back to configured default
+				model = cfg.Backends.Local.Model
+			} else if selected == "" {
+				return // user cancelled
+			} else {
+				model = selected
+			}
 		}
 		if err := download.Model(model); err != nil {
 			fatal("%v", err)
