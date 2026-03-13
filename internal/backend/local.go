@@ -1,4 +1,4 @@
-package main
+package backend
 
 import (
 	"fmt"
@@ -8,12 +8,12 @@ import (
 	"strings"
 )
 
-// resolveModel turns a model name like "large-v3-turbo" into a path to the .bin file.
+// ResolveModel turns a model name like "large-v3-turbo" into a path to the .bin file.
 // Search order:
 //  1. If model is already an absolute path, use it directly
 //  2. ~/.local/share/whisper-cpp/ggml-<model>.bin
 //  3. /opt/homebrew/share/whisper-cpp/ggml-<model>.bin
-func resolveModel(model string) (string, error) {
+func ResolveModel(model string) (string, error) {
 	if filepath.IsAbs(model) {
 		if _, err := os.Stat(model); err == nil {
 			return model, nil
@@ -45,10 +45,8 @@ func resolveModel(model string) (string, error) {
 		model, candidates[0], name)
 }
 
-// preflightLocal checks that whisper-cli binary and model are available.
-// Call this before recording so the user doesn't waste time dictating
-// only to find out the backend isn't ready.
-func preflightLocal(model, binary string) (string, string, error) {
+// PreflightLocal checks that whisper-cli binary and model are available.
+func PreflightLocal(model, binary string) (string, string, error) {
 	if binary == "" {
 		var err error
 		binary, err = exec.LookPath("whisper-cli")
@@ -57,7 +55,7 @@ func preflightLocal(model, binary string) (string, string, error) {
 		}
 	}
 
-	modelPath, err := resolveModel(model)
+	modelPath, err := ResolveModel(model)
 	if err != nil {
 		return "", "", err
 	}
@@ -65,9 +63,9 @@ func preflightLocal(model, binary string) (string, string, error) {
 	return binary, modelPath, nil
 }
 
-func transcribeLocal(audioFile, language, modelPath, binary string) (string, error) {
+func TranscribeLocal(audioFile, language, modelPath, binary string) (string, error) {
 	args := []string{
-		"-m", modelPath, // already resolved absolute path
+		"-m", modelPath,
 		"-l", language,
 		"--no-timestamps",
 		"--no-prints",

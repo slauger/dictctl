@@ -1,4 +1,4 @@
-package main
+package clipboard
 
 import (
 	"fmt"
@@ -6,7 +6,7 @@ import (
 	"strings"
 )
 
-func copyToClipboard(text string) error {
+func Copy(text string) error {
 	cmd := exec.Command("pbcopy")
 	cmd.Stdin = strings.NewReader(text)
 	if err := cmd.Run(); err != nil {

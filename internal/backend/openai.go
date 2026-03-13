@@ -1,4 +1,4 @@
-package main
+package backend
 
 import (
 	"bytes"
@@ -11,16 +11,15 @@ import (
 	"strings"
 )
 
-func transcribeOpenAI(audioFile, language, model, apiKey string) (string, error) {
+func TranscribeOpenAI(audioFile, language, model, apiKey string) (string, error) {
 	var body bytes.Buffer
 	writer := multipart.NewWriter(&body)
 
-	// Add audio file
 	f, err := os.Open(audioFile)
 	if err != nil {
 		return "", err
 	}
-	defer f.Close()
+	defer func() { _ = f.Close() }()
 
 	part, err := writer.CreateFormFile("file", filepath.Base(audioFile))
 	if err != nil {
@@ -30,10 +29,18 @@ func transcribeOpenAI(audioFile, language, model, apiKey string) (string, error)
 		return "", err
 	}
 
-	writer.WriteField("model", model)
-	writer.WriteField("language", language)
-	writer.WriteField("response_format", "text")
-	writer.Close()
+	if err := writer.WriteField("model", model); err != nil {
+		return "", err
+	}
+	if err := writer.WriteField("language", language); err != nil {
+		return "", err
+	}
+	if err := writer.WriteField("response_format", "text"); err != nil {
+		return "", err
+	}
+	if err := writer.Close(); err != nil {
+		return "", err
+	}
 
 	req, err := http.NewRequest("POST", "https://api.openai.com/v1/audio/transcriptions", &body)
 	if err != nil {
@@ -46,7 +53,7 @@ func transcribeOpenAI(audioFile, language, model, apiKey string) (string, error)
 	if err != nil {
 		return "", fmt.Errorf("openai request failed: %w", err)
 	}
-	defer resp.Body.Close()
+	defer func() { _ = resp.Body.Close() }()
 
 	respBody, err := io.ReadAll(resp.Body)
 	if err != nil {

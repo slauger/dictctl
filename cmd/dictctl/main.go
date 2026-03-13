@@ -4,6 +4,12 @@ import (
 	"fmt"
 	"os"
 	"strings"
+
+	"github.com/slauger/dictctl/internal/audio"
+	"github.com/slauger/dictctl/internal/backend"
+	"github.com/slauger/dictctl/internal/clipboard"
+	"github.com/slauger/dictctl/internal/config"
+	"github.com/slauger/dictctl/internal/download"
 )
 
 var version = "dev"
@@ -79,25 +85,22 @@ func main() {
 		return
 	}
 
-	// Handle devices subcommand early (no config needed)
 	if opts.devices {
-		if err := printDevices(); err != nil {
+		if err := audio.PrintDevices(); err != nil {
 			fatal("%v", err)
 		}
 		return
 	}
 
-	cfg, err := loadConfig()
+	cfg, err := config.Load()
 	if err != nil {
 		fatal("config: %v", err)
 	}
 
-	// Apply flag overrides
 	if opts.language != "" {
 		cfg.Language = opts.language
 	}
 
-	// Determine backend
 	backendName := cfg.DefaultBackend
 	if opts.backend != "" {
 		backendName = opts.backend
@@ -109,7 +112,7 @@ func main() {
 		if opts.model != "" {
 			model = opts.model
 		}
-		if err := downloadModel(model); err != nil {
+		if err := download.Model(model); err != nil {
 			fatal("%v", err)
 		}
 		return
@@ -122,7 +125,7 @@ func main() {
 		if opts.model != "" {
 			model = opts.model
 		}
-		localBinary, localModelPath, err = preflightLocal(model, cfg.Backends.Local.Binary)
+		localBinary, localModelPath, err = backend.PreflightLocal(model, cfg.Backends.Local.Binary)
 		if err != nil {
 			fatal("%v\n  Run: dictctl download", err)
 		}
@@ -151,18 +154,18 @@ func main() {
 			fatal("file not found: %s", audioFile)
 		}
 	} else {
-		audioFile, err = record(opts.silence, device)
+		audioFile, err = audio.Record(opts.silence, device)
 		if err != nil {
 			fatal("recording: %v", err)
 		}
-		defer os.Remove(audioFile)
+		defer func() { _ = os.Remove(audioFile) }()
 	}
 
 	// Transcribe
 	var text string
 	switch backendName {
 	case "local":
-		text, err = transcribeLocal(audioFile, cfg.Language, localModelPath, localBinary)
+		text, err = backend.TranscribeLocal(audioFile, cfg.Language, localModelPath, localBinary)
 	case "openai":
 		model := cfg.Backends.OpenAI.Model
 		if opts.model != "" {
@@ -172,7 +175,7 @@ func main() {
 		if apiKey == "" {
 			apiKey = os.Getenv("OPENAI_API_KEY")
 		}
-		text, err = transcribeOpenAI(audioFile, cfg.Language, model, apiKey)
+		text, err = backend.TranscribeOpenAI(audioFile, cfg.Language, model, apiKey)
 	default:
 		fatal("unknown backend: %s", backendName)
 	}
@@ -188,7 +191,7 @@ func main() {
 	fmt.Println(text)
 
 	if opts.clipboard {
-		if err := copyToClipboard(text); err != nil {
+		if err := clipboard.Copy(text); err != nil {
 			fatal("clipboard: %v", err)
 		}
 		fmt.Fprintln(os.Stderr, "(copied to clipboard)")

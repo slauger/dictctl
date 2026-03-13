@@ -1,4 +1,4 @@
-package main
+package download
 
 import (
 	"fmt"
@@ -11,7 +11,7 @@ import (
 
 const huggingfaceBase = "https://huggingface.co/ggerganov/whisper.cpp/resolve/main/"
 
-func modelFileName(model string) string {
+func ModelFileName(model string) string {
 	name := model
 	if !strings.HasPrefix(name, "ggml-") {
 		name = "ggml-" + name
@@ -22,16 +22,16 @@ func modelFileName(model string) string {
 	return name
 }
 
-func modelDir() string {
+func ModelDir() string {
 	home, _ := os.UserHomeDir()
 	return filepath.Join(home, ".local", "share", "whisper-cpp")
 }
 
-func downloadModel(model string) error {
-	name := modelFileName(model)
-	dest := filepath.Join(modelDir(), name)
+func Model(model string) error {
+	name := ModelFileName(model)
+	dest := filepath.Join(ModelDir(), name)
 
-	if err := os.MkdirAll(modelDir(), 0755); err != nil {
+	if err := os.MkdirAll(ModelDir(), 0755); err != nil {
 		return err
 	}
 
@@ -47,7 +47,7 @@ func downloadModel(model string) error {
 	if err != nil {
 		return fmt.Errorf("download failed: %w", err)
 	}
-	defer resp.Body.Close()
+	defer func() { _ = resp.Body.Close() }()
 
 	if resp.StatusCode != http.StatusOK {
 		return fmt.Errorf("download failed: HTTP %d (model %q may not exist)", resp.StatusCode, model)
@@ -60,14 +60,14 @@ func downloadModel(model string) error {
 	}
 
 	written, err := io.Copy(f, resp.Body)
-	f.Close()
+	_ = f.Close()
 	if err != nil {
-		os.Remove(tmp)
+		_ = os.Remove(tmp)
 		return fmt.Errorf("download interrupted: %w", err)
 	}
 
 	if err := os.Rename(tmp, dest); err != nil {
-		os.Remove(tmp)
+		_ = os.Remove(tmp)
 		return err
 	}
 

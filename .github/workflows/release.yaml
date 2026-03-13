@@ -17,10 +17,10 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout
-        uses: actions/checkout@v4
+        uses: actions/checkout@v6
 
       - name: Set up Go
-        uses: actions/setup-go@v5
+        uses: actions/setup-go@v6
         with:
           go-version-file: go.mod
 
@@ -29,9 +29,9 @@ jobs:
           VERSION=${GITHUB_REF_NAME}
           LDFLAGS="-s -w -X main.version=${VERSION}"
 
-          GOOS=linux   GOARCH=amd64 go build -ldflags "${LDFLAGS}" -o dist/dictctl-linux-amd64 .
-          GOOS=linux   GOARCH=arm64 go build -ldflags "${LDFLAGS}" -o dist/dictctl-linux-arm64 .
-          GOOS=darwin  GOARCH=arm64 go build -ldflags "${LDFLAGS}" -o dist/dictctl-darwin-arm64 .
+          GOOS=linux   GOARCH=amd64 go build -ldflags "${LDFLAGS}" -o dist/dictctl-linux-amd64 ./cmd/dictctl
+          GOOS=linux   GOARCH=arm64 go build -ldflags "${LDFLAGS}" -o dist/dictctl-linux-arm64 ./cmd/dictctl
+          GOOS=darwin  GOARCH=arm64 go build -ldflags "${LDFLAGS}" -o dist/dictctl-darwin-arm64 ./cmd/dictctl
 
           cd dist
           sha256sum dictctl-* > checksums.txt

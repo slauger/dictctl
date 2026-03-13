@@ -68,7 +68,7 @@ Press **Ctrl+C** to stop recording. The audio is finalized cleanly and passed to
 | Flag | Description |
 |------|-------------|
 | `-c` | Copy result to clipboard (macOS, via `pbcopy`) |
-| `-l <lang>` | Language code (default: `de`) |
+| `-l <lang>` | Language code (default: `en`) |
 | `-s` | Enable silence detection (auto-stop recording) |
 | `-m <model>` | Override model name |
 | `-d <device>` | Audio input device (see `dictctl devices`) |
@@ -76,11 +76,11 @@ Press **Ctrl+C** to stop recording. The audio is finalized cleanly and passed to
 ### Examples
 
 ```bash
-# Record and transcribe in German (default)
+# Record and transcribe in English (default)
 dictctl
 
-# Record in English via OpenAI
-dictctl openai -l en
+# Record in German via OpenAI
+dictctl openai -l de
 
 # Transcribe a file and copy to clipboard
 dictctl file meeting.wav -c
@@ -132,7 +132,7 @@ Config file: `~/.config/dictctl/config.yaml`
 
 ```yaml
 default_backend: local
-language: de
+language: en
 device: "Elgato Wave:3"
 
 backends:

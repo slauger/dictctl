@@ -1,4 +1,4 @@
-package main
+package audio
 
 import (
 	"encoding/json"
@@ -7,13 +7,13 @@ import (
 	"os/exec"
 )
 
-type audioDevice struct {
+type Device struct {
 	Name      string
 	Channels  int
 	IsDefault bool
 }
 
-func listInputDevices() ([]audioDevice, error) {
+func ListInputDevices() ([]Device, error) {
 	cmd := exec.Command("system_profiler", "SPAudioDataType", "-json")
 	out, err := cmd.Output()
 	if err != nil {
@@ -33,11 +33,11 @@ func listInputDevices() ([]audioDevice, error) {
 		return nil, fmt.Errorf("failed to parse audio data: %w", err)
 	}
 
-	var devices []audioDevice
+	var devices []Device
 	for _, section := range data.Audio {
 		for _, item := range section.Items {
 			if item.InputChannels > 0 {
-				devices = append(devices, audioDevice{
+				devices = append(devices, Device{
 					Name:      item.Name,
 					Channels:  item.InputChannels,
 					IsDefault: item.DefaultInput == "spaudio_yes",
@@ -49,8 +49,8 @@ func listInputDevices() ([]audioDevice, error) {
 	return devices, nil
 }
 
-func printDevices() error {
-	devices, err := listInputDevices()
+func PrintDevices() error {
+	devices, err := ListInputDevices()
 	if err != nil {
 		return err
 	}

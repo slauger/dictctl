@@ -1,4 +1,4 @@
-package main
+package config
 
 import (
 	"os"
@@ -7,14 +7,14 @@ import (
 	"gopkg.in/yaml.v3"
 )
 
-type config struct {
+type Config struct {
 	DefaultBackend string `yaml:"default_backend"`
 	Language       string `yaml:"language"`
 	Device         string `yaml:"device"`
 	Backends       struct {
 		Local struct {
 			Model  string `yaml:"model"`
-			Binary string `yaml:"binary"`  // path to whisper-cli binary (optional)
+			Binary string `yaml:"binary"`
 		} `yaml:"local"`
 		OpenAI struct {
 			APIKey string `yaml:"api_key"`
@@ -23,10 +23,10 @@ type config struct {
 	} `yaml:"backends"`
 }
 
-func loadConfig() (*config, error) {
-	cfg := &config{
+func Load() (*Config, error) {
+	cfg := &Config{
 		DefaultBackend: "local",
-		Language:       "de",
+		Language:       "en",
 	}
 	cfg.Backends.Local.Model = "large-v3-turbo"
 	cfg.Backends.OpenAI.Model = "whisper-1"
@@ -49,12 +49,11 @@ func loadConfig() (*config, error) {
 		return nil, err
 	}
 
-	// Re-apply defaults for empty fields
 	if cfg.DefaultBackend == "" {
 		cfg.DefaultBackend = "local"
 	}
 	if cfg.Language == "" {
-		cfg.Language = "de"
+		cfg.Language = "en"
 	}
 	if cfg.Backends.Local.Model == "" {
 		cfg.Backends.Local.Model = "large-v3-turbo"

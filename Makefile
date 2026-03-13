@@ -5,7 +5,7 @@ LDFLAGS = -s -w -X main.version=$(VERSION)
 .PHONY: build install clean lint
 
 build:
-	go build -ldflags "$(LDFLAGS)" -o dictctl .
+	go build -ldflags "$(LDFLAGS)" -o dictctl ./cmd/dictctl
 
 install: build
 	install -m 755 dictctl $(PREFIX)/bin/dictctl

@@ -1,4 +1,4 @@
-package main
+package audio
 
 import (
 	"fmt"
@@ -8,7 +8,7 @@ import (
 	"syscall"
 )
 
-func record(silenceDetection bool, device string) (string, error) {
+func Record(silenceDetection bool, device string) (string, error) {
 	if _, err := exec.LookPath("rec"); err != nil {
 		return "", fmt.Errorf("rec (sox) not found — install with: brew install sox")
 	}
@@ -17,7 +17,7 @@ func record(silenceDetection bool, device string) (string, error) {
 	if err != nil {
 		return "", err
 	}
-	tmpFile.Close()
+	_ = tmpFile.Close()
 	path := tmpFile.Name()
 
 	args := []string{"-q", "-r", "16000", "-c", "1", "-b", "16", path}
@@ -34,24 +34,21 @@ func record(silenceDetection bool, device string) (string, error) {
 	fmt.Fprintln(os.Stderr, "Recording... (press Ctrl+C to stop)")
 
 	if err := cmd.Start(); err != nil {
-		os.Remove(path)
+		_ = os.Remove(path)
 		return "", err
 	}
 
-	// Catch SIGINT and forward to rec so it finalizes the WAV cleanly
 	sigCh := make(chan os.Signal, 1)
 	signal.Notify(sigCh, syscall.SIGINT)
 
 	go func() {
 		<-sigCh
-		// Send SIGINT to rec process — it will finalize the WAV header and exit
-		cmd.Process.Signal(syscall.SIGINT)
+		_ = cmd.Process.Signal(syscall.SIGINT)
 	}()
 
 	err = cmd.Wait()
 	signal.Stop(sigCh)
 
-	// rec exits with non-zero on SIGINT, which is expected
 	if err != nil {
 		if exitErr, ok := err.(*exec.ExitError); ok {
 			if status, ok := exitErr.Sys().(syscall.WaitStatus); ok {
@@ -59,7 +56,6 @@ func record(silenceDetection bool, device string) (string, error) {
 					err = nil
 				}
 			}
-			// rec returns exit code 2 on SIGINT on some systems
 			if exitErr.ExitCode() == 2 {
 				err = nil
 			}
@@ -67,13 +63,13 @@ func record(silenceDetection bool, device string) (string, error) {
 	}
 
 	if err != nil {
-		os.Remove(path)
+		_ = os.Remove(path)
 		return "", fmt.Errorf("rec failed: %w", err)
 	}
 
 	info, err := os.Stat(path)
 	if err != nil || info.Size() < 100 {
-		os.Remove(path)
+		_ = os.Remove(path)
 		return "", fmt.Errorf("recording too short or empty")
 	}
 
