@@ -6,8 +6,11 @@ import (
 	"fmt"
 	"os"
 	"os/exec"
+	"path/filepath"
 	"regexp"
 	"strings"
+
+	"gopkg.in/yaml.v3"
 )
 
 type Device struct {
@@ -105,9 +108,45 @@ func selectDeviceInteractive(devices []Device) error {
 		selected = selected[:idx]
 	}
 
-	fmt.Println(selected)
-	fmt.Fprintf(os.Stderr, "\nTo set as default, add to ~/.config/dictctl/config.yaml:\n  device: %q\n", selected)
+	if err := writeDeviceToConfig(selected); err != nil {
+		return fmt.Errorf("failed to save config: %w", err)
+	}
+	fmt.Fprintf(os.Stderr, "Saved device %q to ~/.config/dictctl/config.yaml\n", selected)
 	return nil
+}
+
+func writeDeviceToConfig(device string) error {
+	home, err := os.UserHomeDir()
+	if err != nil {
+		return err
+	}
+
+	configDir := filepath.Join(home, ".config", "dictctl")
+	configPath := filepath.Join(configDir, "config.yaml")
+
+	// Read existing config or start fresh
+	var cfg map[string]any
+	data, err := os.ReadFile(configPath)
+	if err == nil {
+		if err := yaml.Unmarshal(data, &cfg); err != nil {
+			return err
+		}
+	}
+	if cfg == nil {
+		cfg = make(map[string]any)
+	}
+
+	cfg["device"] = device
+
+	out, err := yaml.Marshal(cfg)
+	if err != nil {
+		return err
+	}
+
+	if err := os.MkdirAll(configDir, 0755); err != nil {
+		return err
+	}
+	return os.WriteFile(configPath, out, 0644)
 }
 
 func isTerminal() bool {
