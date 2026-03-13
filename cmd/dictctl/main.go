@@ -49,6 +49,11 @@ func parseArgs(args []string) options {
 			if i < len(args) {
 				opts.model = args[i]
 			}
+		case "-b":
+			i++
+			if i < len(args) {
+				opts.backend = args[i]
+			}
 		case "-d":
 			i++
 			if i < len(args) {
@@ -70,9 +75,7 @@ func parseArgs(args []string) options {
 		case "help", "--help", "-h":
 			opts.help = true
 		default:
-			if !strings.HasPrefix(args[i], "-") {
-				opts.backend = args[i]
-			}
+			// ignore unknown args
 		}
 		i++
 	}
@@ -88,12 +91,8 @@ func main() {
 	opts := parseArgs(os.Args[1:])
 
 	if opts.help {
-		fmt.Print(`Usage: dictctl [backend] [flags]
+		fmt.Print(`Usage: dictctl [flags]
        dictctl <command> [flags]
-
-Backends:
-  local         Record and transcribe with whisper-cpp (default)
-  openai        Record and transcribe with OpenAI API
 
 Commands:
   file <path>   Transcribe an existing audio file
@@ -103,6 +102,7 @@ Commands:
   version       Print version
 
 Flags:
+  -b <backend>  Backend: local, openai (default: from config)
   -c            Copy result to clipboard
   -l <lang>     Language code (default: en)
   -s            Enable silence detection
