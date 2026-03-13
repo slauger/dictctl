@@ -10,6 +10,7 @@ import (
 	"github.com/slauger/dictctl/internal/clipboard"
 	"github.com/slauger/dictctl/internal/config"
 	"github.com/slauger/dictctl/internal/download"
+	"github.com/slauger/dictctl/internal/setup"
 )
 
 var version = "dev"
@@ -24,6 +25,7 @@ type options struct {
 	device    string
 	devices   bool
 	download  bool
+	setup     bool
 	version   bool
 	help      bool
 }
@@ -61,6 +63,8 @@ func parseArgs(args []string) options {
 			opts.devices = true
 		case "download":
 			opts.download = true
+		case "setup":
+			opts.setup = true
 		case "version", "--version", "-v":
 			opts.version = true
 		case "help", "--help", "-h":
@@ -92,6 +96,7 @@ Commands:
   file <path> Transcribe an existing audio file
   devices     List audio input devices
   download    Download whisper model
+  setup       Interactive configuration (requires fzf)
   version     Print version
 
 Flags:
@@ -120,6 +125,13 @@ Flags:
 	cfg, err := config.Load()
 	if err != nil {
 		fatal("config: %v", err)
+	}
+
+	if opts.setup {
+		if err := setup.Run(cfg.Language, cfg.Device, cfg.DefaultBackend); err != nil {
+			fatal("%v", err)
+		}
+		return
 	}
 
 	if opts.language != "" {
