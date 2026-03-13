@@ -88,16 +88,19 @@ func main() {
 	opts := parseArgs(os.Args[1:])
 
 	if opts.help {
-		fmt.Print(`Usage: dictctl [command] [flags]
+		fmt.Print(`Usage: dictctl [backend] [flags]
+       dictctl <command> [flags]
+
+Backends:
+  local         Record and transcribe with whisper-cpp (default)
+  openai        Record and transcribe with OpenAI API
 
 Commands:
-  local       Record and transcribe with whisper-cpp
-  openai      Record and transcribe with OpenAI API
-  file <path> Transcribe an existing audio file
-  devices     List audio input devices
-  download    Download whisper model
-  setup       Interactive configuration (requires fzf)
-  version     Print version
+  file <path>   Transcribe an existing audio file
+  devices       List audio input devices
+  download      Download whisper model
+  setup         Interactive configuration (requires fzf)
+  version       Print version
 
 Flags:
   -c            Copy result to clipboard
