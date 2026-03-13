@@ -11,6 +11,7 @@ CLI tool for dictation: microphone recording → Whisper transcription → text 
 - 📋 **Clipboard Support** — Copy transcription result directly to clipboard with `-c`
 - 🔇 **Silence Detection** — Auto-stop recording after silence with `-s`
 - 📁 **File Transcription** — Transcribe existing audio files without recording
+- 🔧 **Interactive Setup** — Configure language, backend, model, and audio device via `dictctl setup` (requires [fzf](https://github.com/junegunn/fzf))
 - ⚡ **Single Binary** — No runtime dependencies, no Python, no Docker — just a Go binary and sox
 
 ## Requirements
@@ -51,13 +52,12 @@ dictctl
 
 ```bash
 dictctl                         # record → default backend
-dictctl local                   # record → whisper-cpp
-dictctl openai                  # record → OpenAI API
+dictctl -b openai               # record → OpenAI API
 dictctl file audio.mp3          # transcribe existing file
-dictctl file audio.mp3 openai   # transcribe file with specific backend
 dictctl devices                 # list audio input devices
-dictctl download                # download whisper model
+dictctl download                # download whisper model (interactive)
 dictctl download -m base        # download a specific model
+dictctl setup                   # interactive configuration
 dictctl --help                  # show help
 ```
 
@@ -67,7 +67,9 @@ Press **Ctrl+C** to stop recording. The audio is finalized cleanly and passed to
 
 | Flag | Description |
 |------|-------------|
+| `-b <backend>` | Backend: `local`, `openai` (default: from config) |
 | `-c` | Copy result to clipboard (macOS, via `pbcopy`) |
+| `-d <device>` | Audio input device (see `dictctl devices`) |
 | `-l <lang>` | Language code (default: `en`) |
 | `-s` | Enable silence detection (auto-stop recording) |
 | `-m <model>` | Override model name |
@@ -80,13 +82,16 @@ Press **Ctrl+C** to stop recording. The audio is finalized cleanly and passed to
 dictctl
 
 # Record in German via OpenAI
-dictctl openai -l de
+dictctl -b openai -l de
 
 # Transcribe a file and copy to clipboard
 dictctl file meeting.wav -c
 
 # Use a specific local model
-dictctl local -m large-v3
+dictctl -m large-v3
+
+# Record from a specific device
+dictctl -d "Elgato Wave:3"
 ```
 
 ## Models
