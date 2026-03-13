@@ -25,6 +25,7 @@ type options struct {
 	devices   bool
 	download  bool
 	version   bool
+	help      bool
 }
 
 func parseArgs(args []string) options {
@@ -62,6 +63,8 @@ func parseArgs(args []string) options {
 			opts.download = true
 		case "version", "--version", "-v":
 			opts.version = true
+		case "help", "--help", "-h":
+			opts.help = true
 		default:
 			if !strings.HasPrefix(args[i], "-") {
 				opts.backend = args[i]
@@ -79,6 +82,28 @@ func fatal(format string, args ...any) {
 
 func main() {
 	opts := parseArgs(os.Args[1:])
+
+	if opts.help {
+		fmt.Print(`Usage: dictctl [command] [flags]
+
+Commands:
+  local       Record and transcribe with whisper-cpp
+  openai      Record and transcribe with OpenAI API
+  file <path> Transcribe an existing audio file
+  devices     List audio input devices
+  download    Download whisper model
+  version     Print version
+
+Flags:
+  -c            Copy result to clipboard
+  -l <lang>     Language code (default: en)
+  -s            Enable silence detection
+  -m <model>    Override model name
+  -d <device>   Audio input device
+  -h, --help    Show this help
+`)
+		return
+	}
 
 	if opts.version {
 		fmt.Println("dictctl " + version)
