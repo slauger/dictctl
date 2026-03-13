@@ -75,23 +75,17 @@ func parseArgs(args []string) options {
 		case "help", "--help", "-h":
 			opts.help = true
 		default:
-			fatal("unknown argument: %s", args[i])
+			fmt.Fprintf(os.Stderr, "dictctl: unknown argument: %s\n\n", args[i])
+			fmt.Print(usage())
+			os.Exit(1)
 		}
 		i++
 	}
 	return opts
 }
 
-func fatal(format string, args ...any) {
-	fmt.Fprintf(os.Stderr, "dictctl: "+format+"\n", args...)
-	os.Exit(1)
-}
-
-func main() {
-	opts := parseArgs(os.Args[1:])
-
-	if opts.help {
-		fmt.Print(`Usage: dictctl [flags]
+func usage() string {
+	return `Usage: dictctl [flags]
        dictctl <command> [flags]
 
 Commands:
@@ -109,7 +103,19 @@ Flags:
   -m <model>    Override model name
   -d <device>   Audio input device (see 'dictctl devices')
   -h, --help    Show this help
-`)
+`
+}
+
+func fatal(format string, args ...any) {
+	fmt.Fprintf(os.Stderr, "dictctl: "+format+"\n", args...)
+	os.Exit(1)
+}
+
+func main() {
+	opts := parseArgs(os.Args[1:])
+
+	if opts.help {
+		fmt.Print(usage())
 		return
 	}
 
