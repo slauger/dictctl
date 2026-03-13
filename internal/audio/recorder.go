@@ -78,8 +78,8 @@ func Record(silenceDetection bool, device string) (string, error) {
 					err = nil
 				}
 			}
-			// rec returns exit code 2 on SIGINT
-			if exitErr.ExitCode() == 2 {
+			// rec returns exit code 2, ffmpeg returns 255 on SIGINT
+			if exitErr.ExitCode() == 2 || exitErr.ExitCode() == 255 {
 				err = nil
 			}
 		}
