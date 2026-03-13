@@ -5,6 +5,12 @@
     "@semantic-release/release-notes-generator",
     "@semantic-release/changelog",
     [
+      "@semantic-release/exec",
+      {
+        "prepareCmd": "LDFLAGS=\"-s -w -X main.version=v${nextRelease.version}\" && mkdir -p dist && GOOS=linux GOARCH=amd64 go build -ldflags \"$LDFLAGS\" -o dist/dictctl-linux-amd64 ./cmd/dictctl && GOOS=linux GOARCH=arm64 go build -ldflags \"$LDFLAGS\" -o dist/dictctl-linux-arm64 ./cmd/dictctl && GOOS=darwin GOARCH=arm64 go build -ldflags \"$LDFLAGS\" -o dist/dictctl-darwin-arm64 ./cmd/dictctl && cd dist && sha256sum dictctl-* > checksums.txt"
+      }
+    ],
+    [
       "@semantic-release/git",
       {
         "assets": ["CHANGELOG.md"],
@@ -14,6 +20,12 @@
     [
       "@semantic-release/github",
       {
+        "assets": [
+          {"path": "dist/dictctl-linux-amd64", "label": "dictctl-linux-amd64"},
+          {"path": "dist/dictctl-linux-arm64", "label": "dictctl-linux-arm64"},
+          {"path": "dist/dictctl-darwin-arm64", "label": "dictctl-darwin-arm64"},
+          {"path": "dist/checksums.txt", "label": "checksums.txt"}
+        ],
         "successComment": false,
         "failTitle": false
       }
