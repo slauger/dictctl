@@ -2,6 +2,7 @@ package audio
 
 import (
 	"fmt"
+	"io"
 	"os"
 	"os/exec"
 	"os/signal"
@@ -17,7 +18,8 @@ func Record(silenceDetection bool, device string) (string, error) {
 	path := tmpFile.Name()
 
 	var cmd *exec.Cmd
-	if device != "" {
+	useFFmpeg := device != ""
+	if useFFmpeg {
 		cmd, err = buildFFmpegCmd(device, path)
 	} else {
 		cmd, err = buildRecCmd(silenceDetection, path)
@@ -27,9 +29,22 @@ func Record(silenceDetection bool, device string) (string, error) {
 		return "", err
 	}
 
-	cmd.Stderr = os.Stderr
+	// Only show rec stderr (sox is quiet with -q); ffmpeg stderr is suppressed via -loglevel
+	if !useFFmpeg {
+		cmd.Stderr = os.Stderr
+	}
 
-	if device != "" {
+	// For ffmpeg: pipe stdin so we can send 'q' for graceful stop
+	var stdinPipe io.WriteCloser
+	if useFFmpeg {
+		stdinPipe, err = cmd.StdinPipe()
+		if err != nil {
+			_ = os.Remove(path)
+			return "", err
+		}
+	}
+
+	if useFFmpeg {
 		fmt.Fprintf(os.Stderr, "Recording from %q... (press Ctrl+C to stop)\n", device)
 	} else {
 		fmt.Fprintln(os.Stderr, "Recording... (press Ctrl+C to stop)")
@@ -45,7 +60,12 @@ func Record(silenceDetection bool, device string) (string, error) {
 
 	go func() {
 		<-sigCh
-		_ = cmd.Process.Signal(syscall.SIGINT)
+		if useFFmpeg {
+			// Send 'q' for graceful stop — ffmpeg finalizes the WAV header
+			_, _ = stdinPipe.Write([]byte("q"))
+		} else {
+			_ = cmd.Process.Signal(syscall.SIGINT)
+		}
 	}()
 
 	err = cmd.Wait()
@@ -58,8 +78,8 @@ func Record(silenceDetection bool, device string) (string, error) {
 					err = nil
 				}
 			}
-			// rec returns exit code 2, ffmpeg returns 255 on SIGINT
-			if exitErr.ExitCode() == 2 || exitErr.ExitCode() == 255 {
+			// rec returns exit code 2 on SIGINT
+			if exitErr.ExitCode() == 2 {
 				err = nil
 			}
 		}
@@ -105,6 +125,7 @@ func buildFFmpegCmd(device, path string) (*exec.Cmd, error) {
 	}
 
 	args := []string{
+		"-loglevel", "error",
 		"-f", "avfoundation",
 		"-i", ":" + index,
 		"-ar", "16000",
