@@ -1,0 +1,21 @@
+{
+  "branches": ["main"],
+  "plugins": [
+    "@semantic-release/commit-analyzer",
+    "@semantic-release/release-notes-generator",
+    [
+      "@semantic-release/github",
+      {
+        "assets": [
+          {"path": "dist/dictctl-linux-amd64", "label": "dictctl-linux-amd64"},
+          {"path": "dist/dictctl-linux-arm64", "label": "dictctl-linux-arm64"},
+          {"path": "dist/dictctl-darwin-arm64", "label": "dictctl-darwin-arm64"},
+          {"path": "dist/checksums.txt", "label": "checksums.txt"}
+        ],
+        "successComment": false,
+        "failTitle": false
+      }
+    ]
+  ],
+  "tagFormat": "v${version}"
+}

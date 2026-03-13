@@ -1,0 +1,5 @@
+/dictctl
+dist/
+*.wav
+*.mp3
+node_modules/
