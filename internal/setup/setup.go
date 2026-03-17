@@ -1,6 +1,7 @@
 package setup
 
 import (
+	"bufio"
 	"encoding/json"
 	"fmt"
 	"os"
@@ -57,8 +58,25 @@ var backends = []struct {
 	{"openai", "OpenAI Whisper API (cloud)"},
 }
 
+var openaiModels = []struct {
+	Name string
+	Desc string
+}{
+	{"whisper-1", "Classic Whisper model"},
+	{"gpt-4o-transcribe", "GPT-4o based transcription"},
+	{"gpt-4o-mini-transcribe", "GPT-4o Mini based transcription"},
+}
+
 func fzfSelect(prompt string, items []string) (string, error) {
-	cmd := exec.Command("fzf", "--prompt", prompt, "--height", "~20", "--reverse")
+	args := []string{"--prompt", prompt, "--height", "~20", "--reverse"}
+	// Auto-focus on the currently selected item (marked with *)
+	for i, item := range items {
+		if strings.HasPrefix(item, "* ") {
+			args = append(args, "--bind", fmt.Sprintf("load:pos(%d)", i+1))
+			break
+		}
+	}
+	cmd := exec.Command("fzf", args...)
 	cmd.Stdin = strings.NewReader(strings.Join(items, "\n"))
 	cmd.Stderr = os.Stderr
 	out, err := cmd.Output()
@@ -68,7 +86,7 @@ func fzfSelect(prompt string, items []string) (string, error) {
 	return strings.TrimSpace(string(out)), nil
 }
 
-func Run(currentLang, currentDevice, currentBackend, currentModel string) error {
+func Run(currentLang, currentDevice, currentBackend, currentModel, currentOpenAIModel, currentAPIKey string) error {
 	if _, err := exec.LookPath("fzf"); err != nil {
 		return fmt.Errorf("fzf not found — install with: brew install fzf")
 	}
@@ -101,27 +119,65 @@ func Run(currentLang, currentDevice, currentBackend, currentModel string) error 
 		fmt.Fprintf(os.Stderr, "Backend: %s\n", be)
 	}
 
-	// 3. Model (for local backend)
-	model, err := selectModel(currentModel)
-	if err != nil {
-		return nil
-	}
-	if model != "" {
-		backends, _ := cfg["backends"].(map[string]any)
-		if backends == nil {
-			backends = make(map[string]any)
-		}
-		local, _ := backends["local"].(map[string]any)
-		if local == nil {
-			local = make(map[string]any)
-		}
-		local["model"] = model
-		backends["local"] = local
-		cfg["backends"] = backends
-		fmt.Fprintf(os.Stderr, "Model: %s\n", model)
+	// Determine effective backend
+	effectiveBackend := currentBackend
+	if be != "" {
+		effectiveBackend = be
 	}
 
-	// 4. Device
+	// 3. Model (backend-dependent)
+	backendsMap, _ := cfg["backends"].(map[string]any)
+	if backendsMap == nil {
+		backendsMap = make(map[string]any)
+	}
+
+	switch effectiveBackend {
+	case "openai":
+		model, err := selectOpenAIModel(currentOpenAIModel)
+		if err != nil {
+			return nil
+		}
+		if model != "" {
+			openai, _ := backendsMap["openai"].(map[string]any)
+			if openai == nil {
+				openai = make(map[string]any)
+			}
+			openai["model"] = model
+			backendsMap["openai"] = openai
+			cfg["backends"] = backendsMap
+			fmt.Fprintf(os.Stderr, "Model: %s\n", model)
+		}
+
+		// 4. API Key (only for openai)
+		apiKey := promptAPIKey(currentAPIKey)
+		if apiKey != "" {
+			openai, _ := backendsMap["openai"].(map[string]any)
+			if openai == nil {
+				openai = make(map[string]any)
+			}
+			openai["api_key"] = apiKey
+			backendsMap["openai"] = openai
+			cfg["backends"] = backendsMap
+			fmt.Fprintf(os.Stderr, "API Key: %s***\n", apiKey[:4])
+		}
+	default:
+		model, err := selectModel(currentModel)
+		if err != nil {
+			return nil
+		}
+		if model != "" {
+			local, _ := backendsMap["local"].(map[string]any)
+			if local == nil {
+				local = make(map[string]any)
+			}
+			local["model"] = model
+			backendsMap["local"] = local
+			cfg["backends"] = backendsMap
+			fmt.Fprintf(os.Stderr, "Model: %s\n", model)
+		}
+	}
+
+	// 5. Device
 	dev, err := selectDevice(currentDevice)
 	if err != nil {
 		return nil
@@ -231,6 +287,69 @@ func selectModel(current string) (string, error) {
 		}
 	}
 	return "", nil
+}
+
+func selectOpenAIModel(current string) (string, error) {
+	var items []string
+	for _, m := range openaiModels {
+		marker := "  "
+		if m.Name == current {
+			marker = "* "
+		}
+		items = append(items, fmt.Sprintf("%s%-25s %s", marker, m.Name, m.Desc))
+	}
+
+	selected, err := fzfSelect("Model: ", items)
+	if err != nil {
+		return "", err
+	}
+
+	fields := strings.Fields(selected)
+	if len(fields) < 2 {
+		return "", nil
+	}
+	name := fields[0]
+	if name == "*" {
+		name = fields[1]
+	}
+	return name, nil
+}
+
+func promptAPIKey(currentKey string) string {
+	envKey := os.Getenv("OPENAI_API_KEY")
+
+	if currentKey != "" || envKey != "" {
+		var items []string
+		if currentKey != "" {
+			items = append(items, fmt.Sprintf("Keep existing API key (%s***)", currentKey[:4]))
+		}
+		if envKey != "" && envKey != currentKey {
+			items = append(items, fmt.Sprintf("Keep from env OPENAI_API_KEY (%s***)", envKey[:4]))
+		}
+		items = append(items, "Enter new API key")
+
+		selected, err := fzfSelect("API Key: ", items)
+		if err != nil {
+			return ""
+		}
+
+		if strings.HasPrefix(selected, "Keep existing") {
+			return ""
+		}
+		if strings.HasPrefix(selected, "Keep from env") {
+			return envKey
+		}
+	}
+
+	fmt.Fprint(os.Stderr, "Enter OpenAI API key: ")
+	scanner := bufio.NewScanner(os.Stdin)
+	if scanner.Scan() {
+		key := strings.TrimSpace(scanner.Text())
+		if key != "" {
+			return key
+		}
+	}
+	return ""
 }
 
 func selectDevice(current string) (string, error) {

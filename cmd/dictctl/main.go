@@ -137,7 +137,7 @@ func main() {
 	}
 
 	if opts.setup {
-		if err := setup.Run(cfg.Language, cfg.Device, cfg.DefaultBackend, cfg.Backends.Local.Model); err != nil {
+		if err := setup.Run(cfg.Language, cfg.Device, cfg.DefaultBackend, cfg.Backends.Local.Model, cfg.Backends.OpenAI.Model, cfg.Backends.OpenAI.APIKey); err != nil {
 			fatal("%v", err)
 		}
 		return
