@@ -11,7 +11,7 @@ CLI tool for dictation: microphone recording → Whisper transcription → text 
 - 📋 **Clipboard Support** — Copy transcription result directly to clipboard with `-c`
 - 🔇 **Silence Detection** — Auto-stop recording after silence with `-s`
 - 📁 **File Transcription** — Transcribe existing audio files without recording
-- 🔧 **Interactive Setup** — Configure language, backend, model, and audio device via `dictctl setup` (requires [fzf](https://github.com/junegunn/fzf))
+- 🔧 **Interactive Setup** — Configure language, backend, model, API key, and audio device via `dictctl setup` (requires [fzf](https://github.com/junegunn/fzf))
 - ⚡ **Single Binary** — No runtime dependencies, no Python, no Docker — just a Go binary and sox
 
 ## Requirements
@@ -57,7 +57,7 @@ dictctl file audio.mp3          # transcribe existing file
 dictctl devices                 # list audio input devices
 dictctl download                # download whisper model (interactive)
 dictctl download -m base        # download a specific model
-dictctl setup                   # interactive configuration
+dictctl setup                   # interactive configuration (language, backend, model, API key, device)
 dictctl --help                  # show help
 ```
 
@@ -96,7 +96,9 @@ dictctl -d "Elgato Wave:3"
 
 ## Models
 
-For the `local` backend, download a whisper.cpp GGML model:
+For the `local` backend, whisper.cpp GGML models are available. For the `openai` backend, the supported models are `whisper-1`, `gpt-4o-transcribe`, and `gpt-4o-mini-transcribe`.
+
+Download a local model:
 
 ```bash
 dictctl download                # downloads the configured model (default: large-v3-turbo)
@@ -146,7 +148,7 @@ backends:
     model: whisper-1
 ```
 
-The OpenAI API key can also be set via the `OPENAI_API_KEY` environment variable.
+The OpenAI API key can also be set via the `OPENAI_API_KEY` environment variable or configured interactively with `dictctl setup`.
 
 ## License
 
