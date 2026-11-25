@@ -2,6 +2,6 @@ module github.com/slauger/dictctl
 
 go 1.26
 
-toolchain go1.26.11
+toolchain go1.27.4
 
 require gopkg.in/yaml.v3 v3.0.1
