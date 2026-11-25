@@ -1,6 +1,98 @@
 {
   "$schema": "https://docs.renovatebot.com/renovate-schema.json",
   "extends": [
-    "config:recommended"
+    "config:recommended",
+    ":semanticCommits",
+    "helpers:pinGitHubActionDigests"
+  ],
+  "labels": [
+    "dependencies"
+  ],
+  "osvVulnerabilityAlerts": true,
+  "postUpdateOptions": [
+    "gomodTidy"
+  ],
+  "platformAutomerge": false,
+  "packageRules": [
+    {
+      "description": "Wait before proposing new releases (supply chain protection); security alerts are not delayed",
+      "matchPackageNames": [
+        "*"
+      ],
+      "minimumReleaseAge": "3 days"
+    },
+    {
+      "matchManagers": [
+        "gomod"
+      ],
+      "groupName": "Go dependencies",
+      "semanticCommitType": "fix"
+    },
+    {
+      "matchManagers": [
+        "github-actions"
+      ],
+      "groupName": "GitHub Actions"
+    },
+    {
+      "description": "After the manager groups, otherwise gomod grouping wins and the toolchain ends up in Go dependencies; fix triggers a release with rebuilt binaries",
+      "matchDepNames": [
+        "go"
+      ],
+      "groupName": "Go version",
+      "semanticCommitType": "fix"
+    },
+    {
+      "description": "Node.js only runs semantic-release; keep majors separate and manual (semantic-release sets the minimum Node version)",
+      "matchDepNames": [
+        "node"
+      ],
+      "groupName": "Node.js"
+    },
+    {
+      "description": "Automerge GitHub Actions minor/patch and digest updates (majors stay manual)",
+      "matchManagers": [
+        "github-actions"
+      ],
+      "matchDepNames": [
+        "!node"
+      ],
+      "matchUpdateTypes": [
+        "minor",
+        "patch",
+        "digest",
+        "pin",
+        "pinDigest"
+      ],
+      "automerge": true
+    },
+    {
+      "description": "Automerge Go toolchain patch releases (standard library security fixes, checked by govulncheck)",
+      "matchDepNames": [
+        "go"
+      ],
+      "matchDepTypes": [
+        "toolchain"
+      ],
+      "matchUpdateTypes": [
+        "patch"
+      ],
+      "automerge": true
+    },
+    {
+      "description": "Automerge Go module patch/digest updates (minor/major stay manual)",
+      "matchManagers": [
+        "gomod"
+      ],
+      "matchDepTypes": [
+        "require",
+        "indirect"
+      ],
+      "matchUpdateTypes": [
+        "patch",
+        "digest"
+      ],
+      "automerge": true
+    }
   ]
 }
