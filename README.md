@@ -1,12 +1,14 @@
 # dictctl
 
+[![CI](https://github.com/slauger/dictctl/actions/workflows/ci.yaml/badge.svg)](https://github.com/slauger/dictctl/actions/workflows/ci.yaml)
+[![Release](https://img.shields.io/github/v/release/slauger/dictctl)](https://github.com/slauger/dictctl/releases/latest)
 [![Go](https://img.shields.io/badge/Go-1.26+-00ADD8?logo=go&logoColor=white)](https://go.dev)
 [![License](https://img.shields.io/github/license/slauger/dictctl)](LICENSE)
 
 CLI tool for dictation: microphone recording → Whisper transcription → text on stdout.
 
 - 🎙️ **Record & Transcribe** — Record from your microphone, stop with Ctrl+C, get text on stdout
-- 🏠 **Local Backend** — Offline transcription via [whisper.cpp](https://github.com/ggerganov/whisper.cpp) — no data leaves your machine
+- 🏠 **Local Backend** — Offline transcription via [whisper.cpp](https://github.com/ggml-org/whisper.cpp) — no data leaves your machine
 - ☁️ **OpenAI Backend** — Cloud transcription via the OpenAI Whisper API — no local GPU needed
 - 📋 **Clipboard Support** — Copy transcription result directly to clipboard with `-c`
 - 🔇 **Silence Detection** — Auto-stop recording after silence with `-s`
@@ -19,15 +21,29 @@ CLI tool for dictation: microphone recording → Whisper transcription → text 
 - **sox** — audio recording (`rec` command)
 - **whisper-cpp** — local transcription (optional, for `local` backend)
 - **OpenAI API key** — cloud transcription (optional, for `openai` backend)
+- **ffmpeg** — recording from a selected audio device (optional, macOS, see [Audio Devices](#audio-devices))
+- **fzf** — interactive selection in `dictctl setup`, `dictctl download` and device picking (optional)
 
 ```bash
 brew install sox whisper-cpp
+brew install ffmpeg fzf   # optional
 ```
 
 ## Installation
 
+Prebuilt binaries for macOS (arm64) and Linux (amd64, arm64) are attached to each [GitHub release](https://github.com/slauger/dictctl/releases/latest), together with `checksums.txt`:
+
 ```bash
-go install github.com/slauger/dictctl@latest
+curl -LO https://github.com/slauger/dictctl/releases/latest/download/dictctl-darwin-arm64
+curl -LO https://github.com/slauger/dictctl/releases/latest/download/checksums.txt
+shasum -a 256 --ignore-missing -c checksums.txt
+install -m 755 dictctl-darwin-arm64 /usr/local/bin/dictctl
+```
+
+With Go:
+
+```bash
+go install github.com/slauger/dictctl/cmd/dictctl@latest
 ```
 
 Or build from source:
@@ -58,6 +74,7 @@ dictctl devices                 # list audio input devices
 dictctl download                # download whisper model (interactive)
 dictctl download -m base        # download a specific model
 dictctl setup                   # interactive configuration (language, backend, model, API key, device)
+dictctl version                 # print version
 dictctl --help                  # show help
 ```
 
@@ -74,6 +91,7 @@ Press **Ctrl+C** to stop recording. The audio is finalized cleanly and passed to
 | `-s` | Enable silence detection (auto-stop recording) |
 | `-m <model>` | Override model name |
 | `-h, --help` | Show help |
+| `-v, --version` | Print version |
 
 ### Examples
 
